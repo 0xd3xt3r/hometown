@@ -9,6 +9,8 @@ a multi-dimension design, and a dependency-wired set of implementation beads.
 
 ## Formula Files
 
+![graph](graph.svg)
+
 ### `idea-to-plan.formula.toml`
 **Type:** `workflow` — the top-level formula you cook and pour.
 
