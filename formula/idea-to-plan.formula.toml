@@ -34,8 +34,7 @@ version = 2
 [vars]
 [vars.review_id]
 description = "Short slug for the review (e.g. notification-levels) — computed by the agent"
-required = false
-default = ""
+required = true
 
 [vars.problem]
 description = "Your idea, feature, or problem statement"
