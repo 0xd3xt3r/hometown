@@ -1,0 +1,348 @@
+description = """
+Expansion formula: parallel analysis of a completed idea-to-plan pipeline run,
+producing concrete proposed edits to the formula files themselves.
+
+When applied to a target step (e.g. "formula-feedback"), this expansion produces:
+  {target}.dimension-signal    ← which dimensions were high/low signal this run
+  {target}.gap-pattern         ← what classes of issues recurred across phases
+  {target}.coverage-drift      ← where beads diverged from the plan and why
+  {target}.consolidate         ← waits for all 3, writes formula-feedback.md with
+                                  concrete [[template]] edit proposals
+
+The 3 dimension steps have no internal needs — they run in parallel after
+verify-beads-pass-3 closes. Only consolidate waits for all 3.
+
+## Why This Exists
+
+Every pipeline run generates a rich artifact trail:
+  prd-review.md         → which PRD dimensions found critical issues
+  prd-align-summary.md  → which alignment dimensions had the most must-fix items
+  plan-review-summary.md → which plan dimensions had the most must-fix items
+  verify-beads passes   → how many gaps were found after create-beads
+
+This expansion reads that trail and asks: what would make the formula better
+for the next run? The output is not just observations — it is concrete,
+copy-pasteable edits to [[template]] descriptions in the formula files.
+
+Over multiple runs, formula-feedback.md files accumulate into a calibration
+history that makes the pipeline progressively more accurate.
+"""
+formula = "formula-feedback-expand"
+type = "expansion"
+version = 1
+
+[[template]]
+id = "{target}.dimension-signal"
+title = "Formula feedback: dimension signal analysis"
+description = """
+Analyze which review dimensions were high-signal vs low-signal this run.
+
+**Input:**
+Read the synthesis and consolidation summaries from this pipeline run:
+- `.prd-reviews/{{review_id}}/prd-review.md`
+- `.plan-reviews/{{review_id}}/prd-align-summary.md`
+- `.plan-reviews/{{review_id}}/plan-review-summary.md`
+
+**Your task:**
+
+For each of the 18 parallel dimension steps across the 3 review phases, assess:
+
+**PRD Review dimensions** (requirements, gaps, ambiguity, feasibility, scope, stakeholders):
+- How many Critical Gaps / Questions did each dimension surface?
+- Did any dimension find zero critical issues? (low-signal candidate)
+- Did any dimension surface issues that another dimension also found? (overlap candidate)
+- Did any dimension miss something obvious that only appeared later? (coverage gap)
+
+**PRD Alignment dimensions** (requirements-coverage, goals-alignment, constraints-compliance,
+non-goals-enforcement, user-stories-coverage, open-questions-resolution):
+- How many must-fix items did each dimension contribute to prd-align-summary.md?
+- Were any dimensions redundant with each other given this specific problem?
+- Were there alignment issues that none of the 6 dimensions caught?
+
+**Plan Review dimensions** (completeness, sequencing, risk, scope-creep, testability, coherence):
+- How many must-fix items did each dimension contribute to plan-review-summary.md?
+- Which dimension had the highest-impact findings?
+- Which dimension's findings were already addressed by prd-align?
+
+**Report format:**
+```markdown
+# Dimension Signal Analysis
+
+## PRD Review Phase
+| Dimension    | Critical Issues | Overlap | Signal |
+|--------------|----------------|---------|--------|
+| requirements |                |         | H/M/L  |
+| gaps         |                |         | H/M/L  |
+| ambiguity    |                |         | H/M/L  |
+| feasibility  |                |         | H/M/L  |
+| scope        |                |         | H/M/L  |
+| stakeholders |                |         | H/M/L  |
+
+## PRD Alignment Phase
+| Dimension                  | Must-Fix | Overlap | Signal |
+|----------------------------|----------|---------|--------|
+| requirements-coverage      |          |         | H/M/L  |
+| goals-alignment            |          |         | H/M/L  |
+| constraints-compliance     |          |         | H/M/L  |
+| non-goals-enforcement      |          |         | H/M/L  |
+| user-stories-coverage      |          |         | H/M/L  |
+| open-questions-resolution  |          |         | H/M/L  |
+
+## Plan Review Phase
+| Dimension    | Must-Fix | Overlap | Signal |
+|--------------|----------|---------|--------|
+| completeness |          |         | H/M/L  |
+| sequencing   |          |         | H/M/L  |
+| risk         |          |         | H/M/L  |
+| scope-creep  |          |         | H/M/L  |
+| testability  |          |         | H/M/L  |
+| coherence    |          |         | H/M/L  |
+
+## Candidates for Formula Change
+- LOW-SIGNAL: <dimension> — found nothing critical this run. Consider: merge with <other>, narrow focus, or add a sharper prompt.
+- HIGH-OVERLAP: <dim-a> and <dim-b> — surfaced the same issues. Consider: merge or redefine boundaries.
+- COVERAGE-GAP: <issue class> — not caught by any dimension. Consider: add a new dimension or expand <dimension>.
+```
+
+**Output:**
+Write your report to: `.formula-feedback/{{review_id}}/dimension-signal.md`
+
+**Exit criteria:** `.formula-feedback/{{review_id}}/dimension-signal.md` written.
+"""
+
+[[template]]
+id = "{target}.gap-pattern"
+title = "Formula feedback: recurring gap pattern analysis"
+description = """
+Identify classes of issues that recurred across multiple review phases.
+
+**Input:**
+Read all individual dimension reports from this run:
+- `.prd-reviews/{{review_id}}/requirements.md`
+- `.prd-reviews/{{review_id}}/gaps.md`
+- `.prd-reviews/{{review_id}}/ambiguity.md`
+- `.prd-reviews/{{review_id}}/feasibility.md`
+- `.prd-reviews/{{review_id}}/scope.md`
+- `.prd-reviews/{{review_id}}/stakeholders.md`
+- `.plan-reviews/{{review_id}}/prd-align-requirements.md`
+- `.plan-reviews/{{review_id}}/prd-align-goals.md`
+- `.plan-reviews/{{review_id}}/prd-align-constraints.md`
+- `.plan-reviews/{{review_id}}/prd-align-non-goals.md`
+- `.plan-reviews/{{review_id}}/prd-align-user-stories.md`
+- `.plan-reviews/{{review_id}}/prd-align-open-questions.md`
+- `.plan-reviews/{{review_id}}/review-completeness.md`
+- `.plan-reviews/{{review_id}}/review-sequencing.md`
+- `.plan-reviews/{{review_id}}/review-risk.md`
+- `.plan-reviews/{{review_id}}/review-scope-creep.md`
+- `.plan-reviews/{{review_id}}/review-testability.md`
+- `.plan-reviews/{{review_id}}/review-coherence.md`
+
+**Your task:**
+
+Look for issue classes that appeared in multiple phases. A recurring gap pattern
+means the formula is structurally missing a prompt or check that would have
+caught it earlier.
+
+**Patterns to look for:**
+- An issue first flagged in PRD review that still appeared as a must-fix in plan review
+  (the PRD review prompt didn't go deep enough, or the design phase ignored it)
+- An issue flagged in prd-align that was also flagged in plan-review
+  (the two phases are overlapping — one could be sharpened to avoid redundancy)
+- An issue that appeared in verify-beads that should have been caught in plan-review
+  (the plan-review prompt is missing a check)
+- A class of issue (e.g., "missing error handling", "no rollback plan", "auth not specified")
+  that appeared in 3+ dimensions across phases
+  (this is a structural blind spot — the formula needs a dedicated dimension for it)
+
+**Report format:**
+```markdown
+# Recurring Gap Pattern Analysis
+
+## Cross-Phase Recurring Issues
+For each pattern found:
+
+### Pattern: <issue class name>
+- First appeared: <phase>.<dimension>
+- Also appeared in: <phase>.<dimension>, <phase>.<dimension>
+- Root cause: <why did the formula not catch this earlier?>
+- Formula fix: <which prompt needs what addition to catch this in phase X instead of phase Y>
+
+## Structural Blind Spots
+Issues that appeared late (plan-review or verify-beads) that should have been
+caught in PRD review:
+- BLIND SPOT: <issue> — should be caught by <dimension> but wasn't because <reason>
+  Suggested prompt addition: <specific text to add to the [[template]] description>
+
+## Early-Phase Noise
+Issues flagged in PRD review that turned out to be non-issues by the time
+the plan was written (false positives):
+- NOISE: <issue> — flagged by <dimension> but resolved naturally in design
+  Suggestion: narrow the prompt to avoid this class of false positive
+```
+
+**Output:**
+Write your report to: `.formula-feedback/{{review_id}}/gap-pattern.md`
+
+**Exit criteria:** `.formula-feedback/{{review_id}}/gap-pattern.md` written.
+"""
+
+[[template]]
+id = "{target}.coverage-drift"
+title = "Formula feedback: beads coverage drift analysis"
+description = """
+Analyze how much the created beads drifted from the plan, and why.
+
+**Input:**
+Read the verify-beads steps from this run. Since these are mol steps, read
+their descriptions and any notes left during execution. Also read:
+- `.designs/{{review_id}}/design-doc.md` (the final plan)
+- Current bead list: `bd list --status=open`
+
+**Your task:**
+
+The verify-beads passes exist because `create-beads` never perfectly captures
+the plan on the first pass. Analyze the drift:
+
+**Quantify the drift:**
+- How many beads were created in the initial `create-beads` step?
+- How many were added in verify-beads-pass-1?
+- How many were added in verify-beads-pass-2?
+- How many were added in verify-beads-pass-3?
+- What percentage of total beads were gap-fills?
+
+**Classify the drift:**
+For each bead added in verification passes, classify why it was missed:
+
+- GRANULARITY: the plan task was too coarse — `create-beads` made one bead
+  where the plan implied several
+- IMPLICIT: the plan mentioned the work in passing ("update exports", "add tests")
+  but didn't call it out as a discrete task
+- CROSS-CUTTING: the work spans multiple plan sections and fell through the cracks
+- DEPENDENCY: a dependency bead was missing, not the task itself
+- DESCRIPTION-QUALITY: the bead was created but its description was too vague
+  to be actionable
+
+**Report format:**
+```markdown
+# Beads Coverage Drift Analysis
+
+## Drift Metrics
+- Initial beads (create-beads): <count>
+- Added in pass 1: <count>
+- Added in pass 2: <count>
+- Added in pass 3: <count>
+- Total gap-fill rate: <pct>%
+
+## Drift Classification
+| Category          | Count | % of gaps |
+|-------------------|-------|-----------|
+| Granularity       |       |           |
+| Implicit work     |       |           |
+| Cross-cutting     |       |           |
+| Missing deps      |       |           |
+| Vague description |       |           |
+
+## Root Cause
+<1-2 paragraphs: what does the drift pattern tell us about the create-beads
+prompt or the design-doc.md structure?>
+
+## Formula Fix Candidates
+- If gap-fill rate > 20%: the `create-beads` prompt needs a stronger instruction
+  to enumerate implicit work. Suggested addition: ...
+- If GRANULARITY is dominant: the plan synthesis prompt needs to produce
+  finer-grained tasks. Suggested addition to design-expand synthesize: ...
+- If CROSS-CUTTING is dominant: a dedicated cross-cutting-concerns pass is needed
+  before create-beads. Suggested new step: ...
+```
+
+**Output:**
+Write your report to: `.formula-feedback/{{review_id}}/coverage-drift.md`
+
+**Exit criteria:** `.formula-feedback/{{review_id}}/coverage-drift.md` written.
+"""
+
+[[template]]
+id = "{target}.consolidate"
+title = "Formula feedback: consolidate into proposed formula edits"
+needs = [
+  "{target}.dimension-signal",
+  "{target}.gap-pattern",
+  "{target}.coverage-drift",
+]
+description = """
+Read all 3 feedback reports and produce concrete, copy-pasteable proposed edits
+to the formula files.
+
+**Input:**
+- `.formula-feedback/{{review_id}}/dimension-signal.md`
+- `.formula-feedback/{{review_id}}/gap-pattern.md`
+- `.formula-feedback/{{review_id}}/coverage-drift.md`
+
+**Your task:**
+
+Synthesize all findings into a single `formula-feedback.md` file. The output
+must be **actionable** — not observations, but specific proposed edits.
+
+For each proposed change, provide:
+1. Which formula file to edit
+2. Which `[[template]]` id to edit (or whether to add/remove a template)
+3. The exact text to add, remove, or replace in the `description` field
+4. The rationale (which finding drove this, what it will improve)
+
+**Output:**
+Write to: `.formula-feedback/{{review_id}}/formula-feedback.md`
+
+Structure:
+```markdown
+# Formula Feedback: {{problem}}
+Run: {{review_id}}
+Date: <today>
+
+## Summary
+<2-3 sentences: overall pipeline health this run, top 3 findings>
+
+## Proposed Formula Edits
+
+### Edit 1: <short title>
+**File:** `formula/<filename>.formula.toml`
+**Template:** `<template-id>`
+**Change type:** ADD | REMOVE | REPLACE | NEW-TEMPLATE | REMOVE-TEMPLATE
+
+**Rationale:**
+<which finding drove this and what it will improve>
+
+**Proposed change:**
+```toml
+<exact TOML to add/replace in the description field, or full new [[template]] block>
+```
+
+---
+
+### Edit 2: <short title>
+...
+
+## Low-Priority Observations
+(Findings that don't warrant a formula change but are worth noting)
+- ...
+
+## Calibration History Note
+This is run N for problem class: <brief description of problem type>
+Dimensions that have been consistently high-signal across runs: <list>
+Dimensions that have been consistently low-signal across runs: <list>
+```
+
+**After writing the file, output a summary in conversation:**
+```
+Formula feedback complete.
+Report: .formula-feedback/{{review_id}}/formula-feedback.md
+
+Proposed edits: <count>
+Top finding: <one sentence>
+
+To apply: review .formula-feedback/{{review_id}}/formula-feedback.md
+and copy proposed changes into formula/*.formula.toml
+```
+
+**Exit criteria:** `.formula-feedback/{{review_id}}/formula-feedback.md` written
+with at least one concrete proposed edit per finding.
+"""

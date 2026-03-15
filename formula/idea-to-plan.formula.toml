@@ -5,21 +5,23 @@ Start by describing your idea conversationally to your agent.
 They'll pour this formula and it takes over from there.
 
 ## Pipeline
-[intake]         Agent structures idea into a draft PRD
+[intake]            Agent structures idea into a draft PRD
       ↓
-[prd-review]     6 parallel PRD reviewers → prd-review.synthesize
+[prd-review]        6 parallel PRD reviewers → prd-review.synthesize
       ↓
-[human-clarify]  Agent presents consolidated questions, you answer
+[human-clarify]     Agent presents consolidated questions, you answer
       ↓
-[generate-plan]  6 parallel design dimensions → generate-plan.synthesize
+[generate-plan]     6 parallel design dimensions → generate-plan.synthesize
       ↓
-[prd-align]      6 parallel PRD alignment checks → prd-align.consolidate
+[prd-align]         6 parallel PRD alignment checks → prd-align.consolidate
       ↓
-[plan-review]    6 parallel plan self-reviews → plan-review.consolidate
+[plan-review]       6 parallel plan self-reviews → plan-review.consolidate
       ↓
-[create-beads]   Agent converts the refined plan into beads with dependencies
+[create-beads]      Agent converts the refined plan into beads with dependencies
       ↓
-[verify-beads]   3 sequential passes comparing plan to beads
+[verify-beads]      3 sequential passes comparing plan to beads
+      ↓
+[formula-feedback]  3 parallel analysts → consolidate into proposed formula edits
 
 ## Human Gate
 There is one human gate:
@@ -31,8 +33,9 @@ version = 2
 
 [vars]
 [vars.review_id]
-description = "Short name for the feature (e.g. notification-levels)"
-required = true
+description = "Short slug for the review (e.g. notification-levels) — computed by the agent"
+required = false
+default = ""
 
 [vars.problem]
 description = "Your idea, feature, or problem statement"
@@ -289,6 +292,12 @@ Third and final pass: validate completeness and dependency graph integrity.
 ```
 """
 
+[[steps]]
+id = "formula-feedback"
+title = "Analyze pipeline run and propose formula improvements"
+needs = ["verify-beads-pass-3"]
+description = "Runs 3 parallel analysts across the full artifact trail, then consolidates into concrete proposed edits to the formula files (expanded at cook time)."
+
 [compose]
 [[compose.expand]]
 target = "prd-review"
@@ -305,3 +314,7 @@ with = "prd-align-expand"
 [[compose.expand]]
 target = "plan-review"
 with = "plan-review-expand"
+
+[[compose.expand]]
+target = "formula-feedback"
+with = "formula-feedback-expand"
