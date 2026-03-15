@@ -1,0 +1,284 @@
+description = """
+Expansion formula: parallel plan self-review across 6 dimensions, followed by consolidation.
+
+When applied to a target step (e.g. "plan-review"), this expansion produces:
+  {target}.completeness  ← are all requirements covered? what's missing?
+  {target}.sequencing    ← is the order right? are dependencies correct?
+  {target}.risk          ← what could go wrong? what are the unknowns?
+  {target}.scope-creep   ← is there unnecessary work? what can be cut?
+  {target}.testability   ← can we verify the plan worked?
+  {target}.coherence     ← does the plan hold together as a whole?
+  {target}.consolidate   ← waits for all 6, applies fixes, writes plan-review-summary.md
+
+The 6 dimension steps have no internal needs — they all inherit the target
+step's needs and therefore run in parallel. Only consolidate waits for all 6.
+"""
+formula = "plan-review-expand"
+type = "expansion"
+version = 1
+
+[[template]]
+id = "{target}.completeness"
+title = "Plan review: completeness"
+description = """
+Verify that the implementation plan covers all stated requirements.
+
+**Input:**
+- Plan: `.designs/{{review_id}}/design-doc.md`
+- PRD alignment summary: `.plan-reviews/{{review_id}}/prd-align-summary.md`
+
+**Look for:**
+- Missing infrastructure setup (build config, CI, env vars, feature flags)
+- Missing data migrations or schema changes
+- Missing test tasks (unit, integration, e2e)
+- Missing documentation updates
+- Missing error handling or rollback procedures
+- Implicit dependencies that aren't called out as tasks
+- Tasks that are too coarse-grained to be actionable
+- No monitoring / alerting plan
+- No rollback plan for risky changes
+- Post-launch validation not planned
+
+**Report format for each finding:**
+- FINDING: <what's missing or incomplete>
+  Severity: must-fix | should-fix
+  Suggested addition: <specific task or expansion to add>
+
+**Output:**
+Write your full report to: `.plan-reviews/{{review_id}}/review-completeness.md`
+
+**Exit criteria:** `.plan-reviews/{{review_id}}/review-completeness.md` written.
+"""
+
+[[template]]
+id = "{target}.sequencing"
+title = "Plan review: sequencing"
+description = """
+Verify that the plan's sequencing and dependencies are sound.
+
+**Input:**
+- Plan: `.designs/{{review_id}}/design-doc.md`
+
+**Look for:**
+- Tasks in the wrong order — would any task fail if executed in sequence?
+- Hidden dependencies (task X needs task Y but doesn't say so)
+- Unnecessary serial dependencies (tasks that could be parallelized)
+- Is there a critical path? Is it the shortest possible?
+- Circular dependencies
+- Schema migrations that need to happen before code changes that use them
+- Feature flag requirements not sequenced before the feature itself
+
+**Report format for each finding:**
+- FINDING: <sequencing issue>
+  Severity: must-fix | should-fix
+  Suggested reorder: <how to fix the sequence>
+
+**Output:**
+Write your full report to: `.plan-reviews/{{review_id}}/review-sequencing.md`
+
+**Exit criteria:** `.plan-reviews/{{review_id}}/review-sequencing.md` written.
+"""
+
+[[template]]
+id = "{target}.risk"
+title = "Plan review: risk assessment"
+description = """
+Identify implementation risks, unknowns, and potential failure modes.
+
+**Input:**
+- Plan: `.designs/{{review_id}}/design-doc.md`
+
+**Look for:**
+- Technical risks: unproven approaches, complex integrations, performance unknowns
+- Dependency risks: external services, third-party libraries, API stability
+- Knowledge risks: areas requiring expertise not mentioned in the plan
+- Rollback risks: what if a phase fails mid-execution? Is there a recovery path?
+- Missing spike/POC tasks for high-uncertainty items
+- Single points of failure in the implementation sequence
+- Steps with estimates that seem unrealistic given their description
+
+**Report format for each risk:**
+- RISK: <description>
+  Impact: HIGH | MEDIUM | LOW
+  Likelihood: HIGH | MEDIUM | LOW
+  Mitigation: must-fix | should-fix
+  Suggested action: <add spike, add fallback plan, add monitoring, etc.>
+
+**Output:**
+Write your full report to: `.plan-reviews/{{review_id}}/review-risk.md`
+
+**Exit criteria:** `.plan-reviews/{{review_id}}/review-risk.md` written.
+"""
+
+[[template]]
+id = "{target}.scope-creep"
+title = "Plan review: scope discipline"
+description = """
+Identify scope creep and opportunities to simplify.
+
+**Input:**
+- Plan: `.designs/{{review_id}}/design-doc.md`
+- PRD: `.prd-reviews/{{review_id}}/prd-draft.md`
+
+**Look for:**
+- Gold-plating: tasks that go beyond what's needed for the stated goals
+- Premature optimization: performance work before proving it's needed
+- Over-engineering: abstractions, frameworks, or generalization beyond requirements
+- Nice-to-haves disguised as requirements
+- Tasks that could be deferred to a follow-up without impacting the core feature
+- Refactors bundled in that aren't required for the feature
+- "While we're in there" cleanup that isn't blocking
+
+**Report format:**
+- CUT: <task/section> — unnecessary because... Suggested action: remove or defer
+- SIMPLIFY: <task/section> — over-engineered. Simpler approach: ...
+- DEFER: <task/section> — not needed for MVP. Move to follow-up.
+
+Classify each as must-fix or should-fix.
+
+**Output:**
+Write your full report to: `.plan-reviews/{{review_id}}/review-scope-creep.md`
+
+**Exit criteria:** `.plan-reviews/{{review_id}}/review-scope-creep.md` written.
+"""
+
+[[template]]
+id = "{target}.testability"
+title = "Plan review: testability"
+description = """
+Assess whether the implementation will be verifiable once complete.
+
+**Input:**
+- Plan: `.designs/{{review_id}}/design-doc.md`
+
+**For each task/phase in the plan, check:**
+- Does it have clear acceptance criteria? (How do we know it's done?)
+- Can the acceptance criteria be verified automatically (test, script, query)?
+- Are there tasks for writing tests, or are tests assumed but not planned?
+- Is there an integration test or e2e test that validates the whole feature?
+- Can each phase be independently verified before moving to the next?
+- Missing smoke tests or validation steps post-deployment
+- Metrics or observability not planned
+
+**Report format:**
+- UNTESTABLE: <task> — no clear way to verify completion. Suggested criteria: ...
+- MISSING-TEST: <task> — needs a test task added. Suggested: ...
+- VAGUE-CRITERIA: <task> — acceptance criteria too vague. Suggested rewrite: ...
+
+Classify each as must-fix or should-fix.
+
+**Output:**
+Write your full report to: `.plan-reviews/{{review_id}}/review-testability.md`
+
+**Exit criteria:** `.plan-reviews/{{review_id}}/review-testability.md` written.
+"""
+
+[[template]]
+id = "{target}.coherence"
+title = "Plan review: coherence"
+description = """
+Review the plan holistically for internal consistency and overall readability.
+
+**Input:**
+- Plan: `.designs/{{review_id}}/design-doc.md`
+- PRD: `.prd-reviews/{{review_id}}/prd-draft.md`
+
+**Check the plan holistically:**
+- Internal contradictions: do any tasks conflict with each other?
+- Naming consistency: are the same concepts named consistently throughout?
+- Architecture coherence: do all pieces fit together into a working system?
+- Missing glue: are there integration points between phases that aren't addressed?
+- Overall readability: could a developer pick this up and start building?
+- Are there implicit requirements (e.g., "update exports", "run migrations") mentioned
+  in passing but not called out as discrete tasks?
+- Cross-cutting concerns (e.g., feature flags, config changes, documentation updates)
+  mentioned across multiple phases but not consolidated
+
+**Report format:**
+- ISSUE: <description>
+  Severity: must-fix | should-fix
+  Suggested fix: <specific change>
+
+**Output:**
+Write your full report to: `.plan-reviews/{{review_id}}/review-coherence.md`
+
+**Exit criteria:** `.plan-reviews/{{review_id}}/review-coherence.md` written.
+"""
+
+[[template]]
+id = "{target}.consolidate"
+title = "Plan review: consolidate and apply fixes"
+needs = [
+  "{target}.completeness",
+  "{target}.sequencing",
+  "{target}.risk",
+  "{target}.scope-creep",
+  "{target}.testability",
+  "{target}.coherence",
+]
+description = """
+Read all 6 plan review reports, apply all must-fix and should-fix changes to the plan,
+and write a consolidated summary.
+
+**Input:**
+Read all 6 review reports:
+- `.plan-reviews/{{review_id}}/review-completeness.md`
+- `.plan-reviews/{{review_id}}/review-sequencing.md`
+- `.plan-reviews/{{review_id}}/review-risk.md`
+- `.plan-reviews/{{review_id}}/review-scope-creep.md`
+- `.plan-reviews/{{review_id}}/review-testability.md`
+- `.plan-reviews/{{review_id}}/review-coherence.md`
+
+**Your task:**
+1. Aggregate all must-fix and should-fix findings across all 6 reports
+2. Deduplicate overlapping findings (cross-dimension findings are higher priority)
+3. Apply all must-fix changes to `.designs/{{review_id}}/design-doc.md`
+4. Apply all should-fix changes to `.designs/{{review_id}}/design-doc.md`
+5. Cut scope-creep items. Add risk mitigations. Add missing test tasks.
+6. Write the consolidated summary
+
+**Output:**
+Write to: `.plan-reviews/{{review_id}}/plan-review-summary.md`
+
+Structure:
+```markdown
+# Plan Review Summary
+
+## Overall Verdict
+GO / GO WITH FIXES / NO-GO — one paragraph rationale
+
+## Fixes Applied
+### Must-Fix (applied)
+- <finding> → <what was changed in design-doc.md>
+
+### Should-Fix (applied)
+- <finding> → <what was changed in design-doc.md>
+
+## Dimension Results
+| Dimension    | Must-Fix | Should-Fix | Verdict |
+|--------------|----------|------------|---------|
+| Completeness |          |            |         |
+| Sequencing   |          |            |         |
+| Risk         |          |            |         |
+| Scope Creep  |          |            |         |
+| Testability  |          |            |         |
+| Coherence    |          |            |         |
+
+## Remaining Open Items
+(Anything that could not be resolved without human input)
+```
+
+**After writing the file, output a summary in conversation:**
+```
+## Plan Review Complete
+
+Overall verdict: <GO / GO WITH FIXES / NO-GO>
+Summary at: .plan-reviews/{{review_id}}/plan-review-summary.md
+Must-fix items applied: <count>
+Should-fix items applied: <count>
+
+Proceeding to bead creation...
+```
+
+**Exit criteria:** All fixes applied to design-doc.md. Summary written. Human notified.
+"""

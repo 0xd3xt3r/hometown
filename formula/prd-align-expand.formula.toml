@@ -1,0 +1,254 @@
+description = """
+Expansion formula: parallel PRD alignment review across 6 dimensions, followed by consolidation.
+
+When applied to a target step (e.g. "prd-align"), this expansion produces:
+  {target}.requirements-coverage      ← every PRD requirement has a plan task
+  {target}.goals-alignment            ← plan execution achieves every PRD goal
+  {target}.constraints-compliance     ← plan respects every PRD constraint
+  {target}.non-goals-enforcement      ← plan contains no out-of-scope work
+  {target}.user-stories-coverage      ← every user story is covered end-to-end
+  {target}.open-questions-resolution  ← every open question is addressed or deferred
+  {target}.consolidate                ← waits for all 6, applies fixes, writes prd-align-summary.md
+
+The 6 dimension steps have no internal needs — they all inherit the target
+step's needs and therefore run in parallel. Only consolidate waits for all 6.
+"""
+formula = "prd-align-expand"
+type = "expansion"
+version = 1
+
+[[template]]
+id = "{target}.requirements-coverage"
+title = "PRD alignment: requirements coverage"
+description = """
+Walk through every requirement in the PRD and verify the plan covers it.
+
+**Input:**
+- PRD: `.prd-reviews/{{review_id}}/prd-draft.md`
+- Plan: `.designs/{{review_id}}/design-doc.md`
+
+**Walk through every REQUIREMENT in the PRD** (Problem Statement, Goals, Acceptance
+Criteria, any explicitly stated requirements). For each, verify the plan has a
+concrete task/phase that addresses it.
+
+**Report format:**
+- COVERED: <requirement> → <plan section that addresses it>
+- GAP: <requirement> — not addressed in plan. Suggested fix: ...
+- PARTIAL: <requirement> — partially addressed. Missing: ...
+
+Classify each GAP/PARTIAL as must-fix or should-fix.
+
+**Output:**
+Write your full report to: `.plan-reviews/{{review_id}}/prd-align-requirements.md`
+
+**Exit criteria:** `.plan-reviews/{{review_id}}/prd-align-requirements.md` written.
+"""
+
+[[template]]
+id = "{target}.goals-alignment"
+title = "PRD alignment: goals alignment"
+description = """
+Walk through every goal in the PRD and verify the plan achieves it.
+
+**Input:**
+- PRD: `.prd-reviews/{{review_id}}/prd-draft.md`
+- Plan: `.designs/{{review_id}}/design-doc.md`
+
+**Walk through every GOAL in the PRD.** For each, trace through the plan and verify
+that executing the plan as written will achieve this goal.
+
+**Report format:**
+- ALIGNED: <goal> → <how the plan achieves it>
+- MISALIGNED: <goal> — the plan won't achieve this because... Suggested fix: ...
+- PARTIAL: <goal> — partially achieved. Gap: ...
+
+Classify each MISALIGNED/PARTIAL as must-fix or should-fix.
+
+**Output:**
+Write your full report to: `.plan-reviews/{{review_id}}/prd-align-goals.md`
+
+**Exit criteria:** `.plan-reviews/{{review_id}}/prd-align-goals.md` written.
+"""
+
+[[template]]
+id = "{target}.constraints-compliance"
+title = "PRD alignment: constraints compliance"
+description = """
+Check every constraint in the PRD and verify the plan respects it.
+
+**Input:**
+- PRD: `.prd-reviews/{{review_id}}/prd-draft.md`
+- Plan: `.designs/{{review_id}}/design-doc.md`
+
+**Check every CONSTRAINT in the PRD** (technical, business, timeline, resource).
+Verify the plan respects each constraint. Flag any plan items that violate or
+ignore stated constraints.
+
+**Report format:**
+- RESPECTED: <constraint> → <how plan respects it>
+- VIOLATED: <constraint> — plan violates this at <section>. Suggested fix: ...
+- UNADDRESSED: <constraint> — plan doesn't account for this. Risk: ...
+
+Classify each as must-fix or should-fix.
+
+**Output:**
+Write your full report to: `.plan-reviews/{{review_id}}/prd-align-constraints.md`
+
+**Exit criteria:** `.plan-reviews/{{review_id}}/prd-align-constraints.md` written.
+"""
+
+[[template]]
+id = "{target}.non-goals-enforcement"
+title = "PRD alignment: non-goals enforcement"
+description = """
+Check the PRD's Non-Goals section and verify the plan contains no out-of-scope work.
+
+**Input:**
+- PRD: `.prd-reviews/{{review_id}}/prd-draft.md`
+- Plan: `.designs/{{review_id}}/design-doc.md`
+
+**Check the PRD's Non-Goals section.** Verify the plan does NOT include work that
+falls into non-goal territory. Flag scope creep — tasks that go beyond what
+the PRD calls for.
+
+**Report format:**
+- CLEAN: <plan section> — stays within scope
+- SCOPE-CREEP: <plan section> — this work falls under non-goal '<non-goal>'. Cut or justify.
+- BORDERLINE: <plan section> — could be interpreted as in/out of scope. Recommendation: ...
+
+Classify each SCOPE-CREEP as must-fix. BORDERLINE as should-fix.
+
+**Output:**
+Write your full report to: `.plan-reviews/{{review_id}}/prd-align-non-goals.md`
+
+**Exit criteria:** `.plan-reviews/{{review_id}}/prd-align-non-goals.md` written.
+"""
+
+[[template]]
+id = "{target}.user-stories-coverage"
+title = "PRD alignment: user stories coverage"
+description = """
+Walk through every user story in the PRD and trace the end-to-end journey through the plan.
+
+**Input:**
+- PRD: `.prd-reviews/{{review_id}}/prd-draft.md`
+- Plan: `.designs/{{review_id}}/design-doc.md`
+
+**Walk through every USER STORY and SCENARIO in the PRD.** For each, trace the
+end-to-end user journey through the plan. Verify every step in the scenario
+is covered by a plan task.
+
+**Report format:**
+- COVERED: <user story> → <plan tasks that implement this journey>
+- GAP: <user story> — step '<step>' has no corresponding plan task. Fix: ...
+- PARTIAL: <user story> — happy path covered but <edge case> is missing. Fix: ...
+
+Classify each as must-fix or should-fix.
+
+**Output:**
+Write your full report to: `.plan-reviews/{{review_id}}/prd-align-user-stories.md`
+
+**Exit criteria:** `.plan-reviews/{{review_id}}/prd-align-user-stories.md` written.
+"""
+
+[[template]]
+id = "{target}.open-questions-resolution"
+title = "PRD alignment: open questions resolution"
+description = """
+Check every open question from the PRD and verify each is addressed or deferred in the plan.
+
+**Input:**
+- PRD: `.prd-reviews/{{review_id}}/prd-draft.md`
+- Plan: `.designs/{{review_id}}/design-doc.md`
+
+**Check every OPEN QUESTION from the PRD** (both the original Open Questions section
+and any questions raised in the Clarifications from Human Review section).
+Verify each question is either:
+- Answered and reflected in the plan
+- Explicitly deferred with a plan task to resolve it
+
+**Report format:**
+- RESOLVED: <question> → <where/how the plan addresses it>
+- UNRESOLVED: <question> — not addressed anywhere. Suggested resolution: ...
+- DEFERRED-OK: <question> — explicitly deferred with task to resolve later
+
+Classify UNRESOLVED as must-fix.
+
+**Output:**
+Write your full report to: `.plan-reviews/{{review_id}}/prd-align-open-questions.md`
+
+**Exit criteria:** `.plan-reviews/{{review_id}}/prd-align-open-questions.md` written.
+"""
+
+[[template]]
+id = "{target}.consolidate"
+title = "PRD alignment: consolidate and apply fixes"
+needs = [
+  "{target}.requirements-coverage",
+  "{target}.goals-alignment",
+  "{target}.constraints-compliance",
+  "{target}.non-goals-enforcement",
+  "{target}.user-stories-coverage",
+  "{target}.open-questions-resolution",
+]
+description = """
+Read all 6 PRD alignment reports, apply all must-fix and should-fix changes to the plan,
+and write a consolidated summary.
+
+**Input:**
+Read all 6 alignment reports:
+- `.plan-reviews/{{review_id}}/prd-align-requirements.md`
+- `.plan-reviews/{{review_id}}/prd-align-goals.md`
+- `.plan-reviews/{{review_id}}/prd-align-constraints.md`
+- `.plan-reviews/{{review_id}}/prd-align-non-goals.md`
+- `.plan-reviews/{{review_id}}/prd-align-user-stories.md`
+- `.plan-reviews/{{review_id}}/prd-align-open-questions.md`
+
+**Your task:**
+1. Aggregate all must-fix and should-fix findings across all 6 reports
+2. Deduplicate overlapping findings (cross-dimension findings are higher priority)
+3. Apply all must-fix changes to `.designs/{{review_id}}/design-doc.md`
+4. Apply all should-fix changes to `.designs/{{review_id}}/design-doc.md`
+5. Cut any scope-creep items identified
+6. Write the consolidated summary
+
+**Output:**
+Write to: `.plan-reviews/{{review_id}}/prd-align-summary.md`
+
+Structure:
+```markdown
+# PRD Alignment Summary
+
+## Overall Assessment
+(1-2 sentences: how well does the plan align with the PRD?)
+
+## Fixes Applied
+### Must-Fix (applied)
+- <finding> → <what was changed in design-doc.md>
+
+### Should-Fix (applied)
+- <finding> → <what was changed in design-doc.md>
+
+## Dimension Results
+| Dimension              | Must-Fix | Should-Fix | Status |
+|------------------------|----------|------------|--------|
+| Requirements Coverage  |          |            |        |
+| Goals Alignment        |          |            |        |
+| Constraints Compliance |          |            |        |
+| Non-Goals Enforcement  |          |            |        |
+| User Stories Coverage  |          |            |        |
+| Open Questions         |          |            |        |
+
+## Remaining Open Items
+(Anything that could not be resolved without human input)
+```
+
+**After writing the file, output a brief summary in conversation:**
+```
+PRD alignment complete. Summary at: .plan-reviews/{{review_id}}/prd-align-summary.md
+Must-fix items applied: <count>
+Should-fix items applied: <count>
+```
+
+**Exit criteria:** All fixes applied to design-doc.md. Summary written.
+"""
