@@ -11,6 +11,57 @@ a multi-dimension design, and a dependency-wired set of implementation beads.
 
 ![graph](graph.svg)
 
+### `shiny.formula.toml`
+**Type:** `workflow` — 5-step engineering workflow: design → implement → review → test → submit.
+
+**Variables:**
+- `feature` (required) — the feature being implemented
+- `assignee` (optional) — who is assigned to this work
+
+Steps:
+- `design` — Design `{{feature}}`
+- `implement` — Implement `{{feature}}` [needs: design]
+- `review` — Review implementation [needs: implement]
+- `test` — Test `{{feature}}` [needs: review]
+- `submit` — Submit for merge [needs: test]
+
+```bash
+bd mol pour shiny --var feature="my feature"
+```
+
+---
+
+### `shiny-enterprise.formula.toml`
+**Type:** `workflow` — Enterprise-grade engineering workflow. Extends `shiny` with a `rule-of-five` expansion on the `implement` step.
+
+The `implement` step is replaced by 5 sequential sub-steps (draft + 4 refinement passes):
+- `implement.draft` — initial implementation
+- `implement.refine-1` — Correctness pass
+- `implement.refine-2` — Clarity pass
+- `implement.refine-3` — Edge Cases pass
+- `implement.refine-4` — Excellence pass
+
+**Total steps: 9**
+
+```bash
+bd mol pour shiny-enterprise --var feature="my feature"
+```
+
+---
+
+### `rule-of-five.formula.toml`
+**Type:** `expansion` — Jeffrey Emanuel's discovery: LLM agents produce best work through 4–5 iterative refinements. Used by `shiny-enterprise` to expand the `implement` step.
+
+| Step | What it does |
+|------|-------------|
+| `{target}.draft` | Initial breadth-first draft |
+| `{target}.refine-1` | Correctness pass |
+| `{target}.refine-2` | Clarity pass |
+| `{target}.refine-3` | Edge Cases pass |
+| `{target}.refine-4` | Excellence pass |
+
+---
+
 ### `idea-to-plan.formula.toml`
 **Type:** `workflow` — the top-level formula you cook and pour.
 
@@ -199,7 +250,43 @@ formula-feedback.consolidate
 
 ---
 
-## Usage
+## Quick Start: `shiny` and `shiny-enterprise`
+
+For everyday feature work, use `shiny` or `shiny-enterprise` directly — no setup needed if formulas are already in `.beads/formulas/`.
+
+```bash
+bd mol pour shiny --var feature="add dark mode toggle"
+bd mol pour shiny-enterprise --var feature="add dark mode toggle"
+```
+
+Check what's ready:
+
+```bash
+bd ready
+bd mol show <mol-id>
+```
+
+### Bonding with an existing issue
+
+`bd mol bond` requires issue IDs, not formula names directly. Pour the formula first, then bond:
+
+```bash
+# 1. Pour the formula to get a mol ID
+bd mol pour shiny --var feature="my feature"
+# → prints mol ID, e.g. ht-mol-5kx2
+
+# 2. Bond an existing issue sequentially (shiny workflow runs after ht-abc closes)
+bd mol bond <existing-issue-id> <mol-id>
+
+# Or in parallel (both run simultaneously)
+bd mol bond <existing-issue-id> <mol-id> --type parallel
+```
+
+The same pattern works with `shiny-enterprise` or `rule-of-five`.
+
+---
+
+## Full Pipeline (`idea-to-plan`): Usage
 
 ### 1. Copy formulas to your project
 
